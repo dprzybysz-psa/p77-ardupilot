@@ -95,6 +95,18 @@ public:
     /// check for a change in the radius params
     void check_param_change();
 
+    // get rate in degrees per second. Rate will be +ve for clockwise and -ve for counter-clockwise
+    float get_rate_with_direction() const;
+
+     enum class TurnDirection {
+        CIRCLE_DEFAULT, //direction is set by sign of rate parameter
+        CIRCLE_CW,      //circle in clockwise direction
+        CIRCLE_CCW,     //circle in counter clockwise direction
+    };
+
+    // set the direction of travel around the circle
+    void set_direction_of_travel(TurnDirection direction) { _direction = direction; }
+
     static const struct AP_Param::GroupInfo var_info[];
 
 private:
@@ -159,4 +171,5 @@ private:
     bool        _rangefinder_available; // true if range finder could be used
     bool        _rangefinder_healthy;   // true if range finder is healthy
     float       _rangefinder_alt_cm;    // latest rangefinder altitude
+    TurnDirection _direction;           // direction of travel around the circle
 };
