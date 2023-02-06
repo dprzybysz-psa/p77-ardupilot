@@ -145,7 +145,8 @@ bool MAVLink_routing::check_and_forward(mavlink_channel_t in_channel, const mavl
     }
 
     // forward on any channels matching the targets
-    bool forwarded = false;
+    // P77: not used variable
+    // bool forwarded = false;
     bool sent_to_chan[MAVLINK_COMM_NUM_BUFFERS];
     memset(sent_to_chan, 0, sizeof(sent_to_chan));
     for (uint8_t i=0; i<num_routes; i++) {
@@ -177,15 +178,17 @@ bool MAVLink_routing::check_and_forward(mavlink_channel_t in_channel, const mavl
                     _mavlink_resend_uart(routes[i].channel, &msg);
                 }
                 sent_to_chan[routes[i].channel] = true;
-                forwarded = true;
+                // P77: not used variable
+                // forwarded = true;
             }
         }
     }
 
-    if ((!forwarded && match_system) ||
-        broadcast_system) {
-        process_locally = true;
-    }
+    // P77: we don't want to process messages which are not dedicated for flight controller - this interfere e.g. with gimal
+    // if ((!forwarded && match_system) ||
+    //    broadcast_system) {
+    //    process_locally = true;
+    //}
 
     return process_locally;
 }
