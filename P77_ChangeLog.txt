@@ -10,3 +10,6 @@
 --- CAMERA ---
 [2023-02-07] make trigger dist a float
 ------
+--- MAVLINK ROUTING ---
+[2022-02-06] Do not process locally MAVLink messages to unkown component id
+-----
