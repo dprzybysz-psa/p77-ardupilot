@@ -1,4 +1,5 @@
 --- LOWEHEISER GENERATOR ---
+[2023-02-06] fix efi_fuel_consumed scaling
 [2022-07-21] (postdated entry) update (merge) to 4.2.2
 [2022-07-14] (postdated entry) merge Peter's Barker generator implementation of loweheiser generator support into 4.2.1
 ------

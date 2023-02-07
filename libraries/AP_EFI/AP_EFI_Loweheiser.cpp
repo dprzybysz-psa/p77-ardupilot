@@ -83,7 +83,7 @@ void AP_EFI_Loweheiser::update()
     internal_state.cylinder_status[0].injection_time_ms = pkt.efi_pw;
     // we convert to cubic-cm-per-minute here from litres/second here:
     internal_state.fuel_consumption_rate_cm3pm = pkt.efi_fuel_flow*(1000/60.0);
-    internal_state.estimated_consumed_fuel_volume_cm3 = pkt.efi_fuel_consumed * 0.001;
+    internal_state.estimated_consumed_fuel_volume_cm3 = pkt.efi_fuel_consumed * 1000;
     internal_state.intake_manifold_pressure_kpa = pkt.efi_baro;
     internal_state.intake_manifold_temperature = C_TO_KELVIN(pkt.efi_mat);
     internal_state.cylinder_status[0].cylinder_head_temperature = C_TO_KELVIN(pkt.efi_clt);
