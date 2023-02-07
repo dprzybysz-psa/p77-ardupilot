@@ -46,7 +46,8 @@ public:
     void            control(float session, float zoom_pos, float zoom_step, float focus_lock, float shooting_cmd, float cmd_id);
 
     // set camera trigger distance in a mission
-    void            set_trigger_distance(uint32_t distance_m)
+    // P77: change uint32_t -> float
+    void            set_trigger_distance(float distance_m)
     {
         _trigg_dist.set(distance_m);
     }

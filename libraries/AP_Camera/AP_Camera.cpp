@@ -360,7 +360,8 @@ void AP_Camera::update()
         return;
     }
 
-    if (is_zero(_trigg_dist)) {
+    // P77: change is_zero to !is_postive
+    if (!is_positive(_trigg_dist)) {
         _last_location.lat = 0;
         _last_location.lng = 0;
         return;
