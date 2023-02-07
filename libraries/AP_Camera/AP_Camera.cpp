@@ -96,7 +96,7 @@ const AP_Param::GroupInfo AP_Camera::var_info[] = {
     // @Param: AUTO_ONLY
     // @DisplayName: Distance-trigging in AUTO mode only
     // @Description: When enabled, trigging by distance is done in AUTO mode only.
-    // @Values: 0:Always,1:Only when in AUTO
+    // @Values: 0:Always,1:Only when in AUTO, 77: P77 intelligent auto disable
     // @User: Standard
     AP_GROUPINFO("AUTO_ONLY",  10, AP_Camera, _auto_mode_only, 0),
 
@@ -391,7 +391,8 @@ void AP_Camera::update()
         return;
     }
 
-    if (_is_in_auto_mode != true && _auto_mode_only != 0) {
+
+    if (_is_in_auto_mode != true && _auto_mode_only == P77_CAMERA_AUTO_MODE_ONLY_ORGINAL) {
         return;
     }
 

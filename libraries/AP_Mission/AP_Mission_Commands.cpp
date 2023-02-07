@@ -118,7 +118,16 @@ bool AP_Mission::start_command_camera(const AP_Mission::Mission_Command& cmd)
         return true;
 
     case MAV_CMD_DO_SET_CAM_TRIGG_DIST:
+        // P77: remember if distance photo triggering was enabled by this mission
+        if(is_positive(cmd.content.cam_trigg_dist.meters)){
+            if(!camera->P77_distance_photo_triggering_enabled())
+                P77_distance_photo_triggering_was_enabled = true;
+        }else{
+            P77_distance_photo_triggering_was_enabled = false;
+        }
+
         camera->set_trigger_distance(cmd.content.cam_trigg_dist.meters);
+
         if (cmd.content.cam_trigg_dist.trigger == 1) {
             camera->take_picture();
         }

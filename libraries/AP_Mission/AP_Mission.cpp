@@ -5,6 +5,7 @@
 #include <AP_Terrain/AP_Terrain.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_AHRS/AP_AHRS.h>
+#include <AP_Camera/AP_Camera.h>
 
 const AP_Param::GroupInfo AP_Mission::var_info[] = {
 
@@ -82,6 +83,9 @@ void AP_Mission::start()
 void AP_Mission::stop()
 {
     _flags.state = MISSION_STOPPED;
+
+    // P77: stop taking photos in distance interval if this feature w   as enabled in this mission and CAM_AUTO_ONLY == P77_CAMERA_AUTO_MODE_ONLY_INTELLIGENT
+    P77_distance_photo_triggering_intelliget_stop();
 }
 
 /// resume - continues the mission execution from where we last left off
@@ -1706,12 +1710,35 @@ bool AP_Mission::mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& c
 /// private methods
 ///
 
+// P77: stop taking photos in distance interval if this feature was enabled in this mission and CAM_AUTO_ONLY == P77_CAMERA_AUTO_MODE_ONLY_INTELLIGENT
+void AP_Mission::P77_distance_photo_triggering_intelliget_stop(){
+    if (!P77_distance_photo_triggering_was_enabled) {
+        return;
+    }
+
+    P77_distance_photo_triggering_was_enabled = false;
+
+    AP_Camera *camera = AP::camera();
+    if (camera == nullptr) {
+        return;
+    }
+
+    if (!camera->P77_get_auto_mode_only_intelligent()) {
+        return;
+    }
+
+    camera->set_trigger_distance(0);
+}
+
 /// complete - mission is marked complete and clean-up performed including calling the mission_complete_fn
 void AP_Mission::complete()
 {
     // flag mission as complete
     _flags.state = MISSION_COMPLETE;
     _flags.in_landing_sequence = false;
+
+    // P77: stop taking photos in distance interval if this feature w   as enabled in this mission and CAM_AUTO_ONLY == P77_CAMERA_AUTO_MODE_ONLY_INTELLIGENT
+    P77_distance_photo_triggering_intelliget_stop();
 
     // callback to main program's mission complete function
     _mission_complete_fn();

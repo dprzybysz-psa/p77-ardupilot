@@ -633,9 +633,15 @@ private:
     // mission WP resume history
     uint16_t _wp_index_history[AP_MISSION_MAX_WP_HISTORY]; // storing the nav_cmd index for the last 6 WPs
 
+    // P77: was distance_photo triggering enabled in this mission
+    bool P77_distance_photo_triggering_was_enabled = false;
+
     ///
     /// private methods
     ///
+
+    // P77: stop taking photos in distance interval if this feature was enabled in this mission and CAM_AUTO_ONLY == P77_CAMERA_AUTO_MODE_ONLY_INTELLIGENT
+    void P77_distance_photo_triggering_intelliget_stop();
 
     /// complete - mission is marked complete and clean-up performed including calling the mission_complete_fn
     void complete();

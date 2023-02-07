@@ -19,3 +19,7 @@
 --- LOITER TURNS --
 [2023-02-07] Obey loiter_ccw flag for loiter turns based on rishabsingh3003 code
 ------
+--- CAMERA --
+[2023-02-07] Cherry-pick from P77-camera-trigger-auto-mod into P77-Copter-4.2.2 - remove AP_CAMERA_ENABLED macro support, include AP_Camera to AP_Mission
+[2023-02-07] Added intelligent disabling of camera distance triggering (disable on mission compleate/auto exit if triggering was enabled by current mission)
+-----

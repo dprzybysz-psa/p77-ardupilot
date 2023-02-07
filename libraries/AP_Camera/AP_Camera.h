@@ -13,6 +13,9 @@
 
 #define AP_CAMERA_FEEDBACK_DEFAULT_FEEDBACK_PIN -1  // default is to not use camera feedback pin
 
+#define P77_CAMERA_AUTO_MODE_ONLY_ORGINAL      1
+#define P77_CAMERA_AUTO_MODE_ONLY_INTELLIGENT 77
+
 /// @class	Camera
 /// @brief	Object managing a Photo or video camera
 class AP_Camera {
@@ -50,6 +53,16 @@ public:
     void            set_trigger_distance(float distance_m)
     {
         _trigg_dist.set(distance_m);
+    }
+
+    // P77: should photo triggering been automatically disabled when auto is finish / mission is completed
+    bool P77_get_auto_mode_only_intelligent() const{
+        return _auto_mode_only == P77_CAMERA_AUTO_MODE_ONLY_INTELLIGENT;
+    }
+
+    // P77: is photo triggering by distance enabled?
+    bool P77_distance_photo_triggering_enabled() const{
+        return is_positive(_trigg_dist);
     }
 
     // momentary switch to change camera modes
