@@ -3,3 +3,8 @@
 [2022-07-21] (postdated entry) update (merge) to 4.2.2
 [2022-07-14] (postdated entry) merge Peter's Barker generator implementation of loweheiser generator support into 4.2.1
 ------
+--- EKF BUGFIXS ---
+[2022-11-23] (postdated entry) Backport bugfix: AP_NavEKF3: Prevent on ground range to ground being used in flight
+[2022-11-23] (postdated entry) Backport bugfix: AP_NavEKF3: Don't allow range finder use to start if terrain state is stale
+[2022-11-23] (postdated entry) Backport bugfix: Copter: auto takeoff may trigger terrain failsafe
+------
