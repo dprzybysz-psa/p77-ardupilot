@@ -1,3 +1,4 @@
 --- PROXIMITY ---
+[2023-02-07] Send DISTANCE_SENSOR message for each sensor, also proximity sensors
 [2023-02-07] Report UINT16_MAX from proximity sector if reading is not valid
 ------
