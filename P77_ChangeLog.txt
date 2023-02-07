@@ -13,3 +13,6 @@
 --- MAVLINK ROUTING ---
 [2022-02-06] Do not process locally MAVLink messages to unkown component id
 -----
+--- PROXIMITY ---
+[2023-02-07] Report UINT16_MAX from proximity sector if reading is not valid
+------
