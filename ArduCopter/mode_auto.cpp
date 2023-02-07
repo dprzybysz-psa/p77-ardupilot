@@ -386,10 +386,11 @@ void ModeAuto::land_start()
 
 // auto_circle_movetoedge_start - initialise waypoint controller to move to edge of a circle with it's center at the specified location
 //  we assume the caller has performed all required GPS_ok checks
-void ModeAuto::circle_movetoedge_start(const Location &circle_center, float radius_m)
+void ModeAuto::circle_movetoedge_start(const Location &circle_center, float radius_m, bool ccw_turn)
 {
     // set circle center
     copter.circle_nav->set_center(circle_center);
+    copter.circle_nav->set_direction_of_travel(ccw_turn ? AC_Circle::TurnDirection::CIRCLE_CCW : AC_Circle::TurnDirection::CIRCLE_CW);
 
     // set circle radius
     if (!is_zero(radius_m)) {
@@ -1374,8 +1375,11 @@ void ModeAuto::do_circle(const AP_Mission::Mission_Command& cmd)
         circle_radius_m *= 10;
     }
 
+    // true if circle should be ccw
+    const bool circle_direction_ccw = cmd.content.location.loiter_ccw;
+
     // move to edge of circle (verify_circle) will ensure we begin circling once we reach the edge
-    circle_movetoedge_start(circle_center, circle_radius_m);
+    circle_movetoedge_start(circle_center, circle_radius_m, circle_direction_ccw);
 }
 
 // do_loiter_time - initiate loitering at a point for a given time period

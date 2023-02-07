@@ -53,6 +53,7 @@ AC_Circle::AC_Circle(const AP_InertialNav& inav, const AP_AHRS_View& ahrs, AC_Po
 
     // init flags
     _flags.panorama = false;
+    _direction = TurnDirection::CIRCLE_DEFAULT;
 }
 
 /// init - initialise circle controller setting center specifically
@@ -150,6 +151,23 @@ bool AC_Circle::is_active() const
     return (AP_HAL::millis() - _last_update_ms < 200);
 }
 
+// get rate in degrees per second. Rate will be +ve for clockwise and -ve for counter-clockwise
+float AC_Circle::get_rate_with_direction() const
+{
+    switch (_direction)
+    {
+    case TurnDirection::CIRCLE_CW:
+        return fabsf(_rate);
+    case TurnDirection::CIRCLE_CCW:
+        return -fabsf(_rate);
+    case TurnDirection::CIRCLE_DEFAULT:
+    default:
+        return _rate;
+    }
+
+    return _rate;
+}
+
 /// update - update circle controller
 bool AC_Circle::update(float climb_rate_cms)
 {
@@ -203,7 +221,7 @@ bool AC_Circle::update(float climb_rate_cms)
         _yaw = get_bearing_cd(_inav.get_position_xy_cm(), _center.tofloat().xy());
 
         if ((_options.get() & CircleOptions::FACE_DIRECTION_OF_TRAVEL) != 0) {
-            _yaw += is_positive(_rate)?-9000.0f:9000.0f;
+            _yaw += is_positive(get_rate_with_direction())?-9000.0f:9000.0f;
             _yaw = wrap_360_cd(_yaw);
         }
 
@@ -274,7 +292,7 @@ void AC_Circle::calc_velocities(bool init_velocity)
 {
     // if we are doing a panorama set the circle_angle to the current heading
     if (_radius <= 0) {
-        _angular_vel_max = ToRad(_rate);
+        _angular_vel_max = ToRad(get_rate_with_direction());
         _angular_accel = MAX(fabsf(_angular_vel_max),ToRad(AC_CIRCLE_ANGULAR_ACCEL_MIN));  // reach maximum yaw velocity in 1 second
     }else{
         // calculate max velocity based on waypoint speed ensuring we do not use more than half our max acceleration for accelerating towards the center of the circle
@@ -282,7 +300,7 @@ void AC_Circle::calc_velocities(bool init_velocity)
 
         // angular_velocity in radians per second
         _angular_vel_max = velocity_max/_radius;
-        _angular_vel_max = constrain_float(ToRad(_rate),-_angular_vel_max,_angular_vel_max);
+        _angular_vel_max = constrain_float(ToRad(get_rate_with_direction()),-_angular_vel_max,_angular_vel_max);
 
         // angular_velocity in radians per second
         _angular_accel = MAX(_pos_control.get_max_accel_xy_cmss()/_radius, ToRad(AC_CIRCLE_ANGULAR_ACCEL_MIN));

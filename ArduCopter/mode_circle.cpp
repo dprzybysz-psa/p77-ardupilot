@@ -18,8 +18,9 @@ bool ModeCircle::init(bool ignore_checks)
     pos_control->set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
     pos_control->set_correction_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
 
-    // initialise circle controller including setting the circle center based on vehicle speed
+    // initialise circle controller including setting the circle center based on vehicle speed. Direction of travel will be based on CIRCLE_RATE parameter
     copter.circle_nav->init();
+    copter.circle_nav->set_direction_of_travel(AC_Circle::TurnDirection::CIRCLE_DEFAULT);
 
     return true;
 }

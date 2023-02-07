@@ -16,4 +16,6 @@
 --- PROXIMITY ---
 [2023-02-07] Send DISTANCE_SENSOR message for each sensor, also proximity sensors
 [2023-02-07] Report UINT16_MAX from proximity sector if reading is not valid
+--- LOITER TURNS --
+[2023-02-07] Obey loiter_ccw flag for loiter turns based on rishabsingh3003 code
 ------
