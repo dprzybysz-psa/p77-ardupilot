@@ -1,4 +1,5 @@
 --- PROXIMITY ---
+[2023-02-19] Send DISTANCE_SENSOR quality = 1 if sector reading is invalid 
 [2023-02-07] Send DISTANCE_SENSOR message for each sensor, also proximity sensors
-[2023-02-07] Report UINT16_MAX from proximity sector if reading is not valid
+[2023-02-07] - CHANGE REMOVED - Report UINT16_MAX from proximity sector if reading is not valid 
 ------

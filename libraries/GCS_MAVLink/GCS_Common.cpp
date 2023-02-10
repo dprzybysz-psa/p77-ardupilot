@@ -495,6 +495,7 @@ void GCS_MAVLINK::send_proximity()
                     return;
                 }
 
+                // P77: new variable
                 bool reading_valid = dist_array.valid(i);
 
                 if (reading_valid) {
@@ -505,20 +506,18 @@ void GCS_MAVLINK::send_proximity()
                     continue;
                 }
 
-                //P77: send UINT16_MAX instead of reading if reading is not valid
-                uint16_t distance = reading_valid ? (dist_array.distance[i] * 100.0f) : UINT16_MAX;
-
                 mavlink_msg_distance_sensor_send(
                         chan,
                         AP_HAL::millis(),                               // time since system boot
                         dist_min,                                       // minimum distance the sensor can measure in centimeters
                         dist_max,                                       // maximum distance the sensor can measure in centimeters
-                        distance,                                       // P77: current distance reading or UINT16_MAX if reading is not valid
+                        (uint16_t)(dist_array.distance[i] * 100.0f),    // last valid distance reading
                         MAV_DISTANCE_SENSOR_LASER,                      // type from MAV_DISTANCE_SENSOR enum
                         PROXIMITY_SENSOR_ID_START + i,                  // onboard ID of the sensor
                         dist_array.orientation[i],                      // direction the sensor faces from MAV_SENSOR_ORIENTATION enum
-                        0,                                              // Measurement covariance in centimeters, 0 for unknown / invalid readings
-                        0, 0, nullptr, 0);
+                        0,                                              // Measurement covariance in centimeters,
+                        0, 0, nullptr,
+                        reading_valid ? 0 : 1);                         // P77: quality: 0 for unknown / 1 for invalid readings
             }
         }
     }
