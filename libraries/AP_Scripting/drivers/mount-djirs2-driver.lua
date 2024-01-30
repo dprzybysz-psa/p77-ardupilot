@@ -1,4 +1,5 @@
 -- mount-djirs2-driver.lua: DJIRS2 mount/gimbal driver
+-- luacheck: only 0
 
 --[[
   How to use
@@ -73,7 +74,7 @@
 -- global definitions
 local INIT_INTERVAL_MS = 3000           -- attempt to initialise the gimbal at this interval
 local UPDATE_INTERVAL_MS = 1            -- update interval in millis
-local REPLY_TIMEOUT_MS = 1000           -- timeout waiting for reply after 1 sec
+local REPLY_TIMEOUT_MS = 100            -- timeout waiting for reply after 0.1 sec
 local REQUEST_ATTITUDE_INTERVAL_MS = 100-- request attitude at 10hz
 local SET_ATTITUDE_INTERVAL_MS = 100    -- set attitude at 10hz
 local MOUNT_INSTANCE = 0                -- always control the first mount/gimbal
@@ -83,8 +84,27 @@ local MAV_SEVERITY = {EMERGENCY=0, ALERT=1, CRITICAL=2, ERROR=3, WARNING=4, NOTI
 
 -- parameters
 local PARAM_TABLE_KEY = 38
-assert(param:add_table(PARAM_TABLE_KEY, "DJIR_", 1), "could not add param table")
+assert(param:add_table(PARAM_TABLE_KEY, "DJIR_", 2), "could not add param table")
 assert(param:add_param(PARAM_TABLE_KEY, 1, "DEBUG", 0), "could not add DJIR_DEBUG param")
+assert(param:add_param(PARAM_TABLE_KEY, 2, "UPSIDEDOWN", 0), "could not add DJIR_UPSIDEDOWN param")
+
+--[[
+  // @Param: DJIR_DEBUG
+  // @DisplayName: DJIRS2 debug
+  // @Description: Enable DJIRS2 debug
+  // @Values: 0:Disabled,1:Enabled,2:Enabled with attitude reporting
+  // @User: Advanced
+--]]
+local DJIR_DEBUG = Parameter("DJIR_DEBUG")              -- debug level. 0:disabled 1:enabled 2:enabled with attitude reporting
+
+--[[
+  // @Param: DJIR_UPSIDEDOWN
+  // @DisplayName: DJIRS2 upside down
+  // @Description: DJIRS2 upside down
+  // @Values: 0:Right side up,1:Upside down
+  // @User: Standard
+--]]
+local DJIR_UPSIDEDOWN = Parameter("DJIR_UPSIDEDOWN")    -- 0:rightsideup, 1:upsidedown
 
 -- bind parameters to variables
 local CAN_P1_DRIVER = Parameter("CAN_P1_DRIVER")        -- If using CAN1, should be 1:First driver
@@ -94,11 +114,13 @@ local CAN_P2_DRIVER = Parameter("CAN_P2_DRIVER")        -- If using CAN2, should
 local CAN_P2_BITRATE = Parameter("CAN_P2_BITRATE")      -- If using CAN2, should be 1000000
 local CAN_D2_PROTOCOL = Parameter("CAN_D2_PROTOCOL")    -- If using CAN2, should be 10:Scripting
 local MNT1_TYPE = Parameter("MNT1_TYPE")                -- should be 9:Scripting
-local DJIR_DEBUG = Parameter("DJIR_DEBUG")              -- debug level. 0:disabled 1:enabled 2:enabled with attitude reporting
 
 -- message definitions
 local HEADER = 0xAA
 local RETURN_CODE = {SUCCESS=0x00, PARSE_ERROR=0x01, EXECUTION_FAILED=0x02, UNDEFINED=0xFF}
+local ATTITUDE_PACKET_LEN = {LEGACY=24, LATEST=26}      -- attitude packet expected length.  Legacy must be less than latest
+local POSITION_CONTROL_PACKET_LEN = {LEGACY=17, LATEST=19}  -- position control packet expected length.  Legacy must be less than latest
+local SPEED_CONTROL_PACKET_LEN = {LEGACY=17, LATEST=19} -- speed control packet expected length.  Legacy must be less than latest
 
 -- parsing state definitions
 local PARSE_STATE_WAITING_FOR_HEADER        = 0
@@ -268,6 +290,15 @@ function uint32_value(byte3, byte2, byte1, byte0)
   return (((byte3 & 0xFF) << 24) | ((byte2 & 0xFF) << 16) | ((byte1 & 0xFF) << 8) | (byte0 & 0xFF))
 end
 
+-- wrap yaw angle in degrees to value between 0 and 360
+function wrap_360(angle)
+   local res = math.fmod(angle, 360.0)
+    if res < 0 then
+        res = res + 360.0
+    end
+    return res
+end
+
 -- wrap yaw angle in degrees to value between -180 and +180
 function wrap_180(angle_deg)
   local res = wrap_360(angle_deg)
@@ -428,6 +459,11 @@ function send_target_angles(roll_angle_deg, pitch_angle_deg, yaw_angle_deg, time
   yaw_angle_deg = yaw_angle_deg or 0
   time_sec = time_sec or 2
 
+  -- if upsidedown, add 180deg to yaw
+  if DJIR_UPSIDEDOWN:get() > 0 then
+    yaw_angle_deg = wrap_180(yaw_angle_deg + 180)
+  end
+
   -- ensure angles are integers
   roll_angle_deg = math.floor(roll_angle_deg + 0.5)
   pitch_angle_deg = math.floor(pitch_angle_deg + 0.5)
@@ -482,8 +518,8 @@ function send_target_rates(roll_rate_degs, pitch_rate_degs, yaw_rate_degs)
   yaw_rate_degs = yaw_rate_degs or 0
   time_sec = time_sec or 2
 
-  -- ensure rates are integers
-  roll_rate_degs = math.floor(roll_rate_degs + 0.5)
+  -- ensure rates are integers. invert roll direction
+  roll_rate_degs = -math.floor(roll_rate_degs + 0.5)
   pitch_rate_degs = math.floor(pitch_rate_degs + 0.5)
   yaw_rate_degs = math.floor(yaw_rate_degs + 0.5)
 
@@ -502,7 +538,7 @@ function send_target_rates(roll_rate_degs, pitch_rate_degs, yaw_rate_degs)
   -- Field name                  SOF  LenL  LenH CmdTyp  Enc   RES   RES   RES  SeqL  SeqH  CrcL  CrcH CmdSet CmdId YawL  YawH  RollL RollH PitL  PitH  Ctrl CRC32 CRC32 CRC32 CRC32
   local set_target_speed_msg = {0xAA, 0x19, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x88, 0x00, 0x00, 0x00, 0x00}
 
-  -- set angles
+  -- set rates
   set_target_speed_msg[15] = lowbyte(yaw_rate_degs * 10)
   set_target_speed_msg[16] = highbyte(yaw_rate_degs * 10)
   set_target_speed_msg[17] = lowbyte(roll_rate_degs * 10)
@@ -620,12 +656,27 @@ function parse_byte(b)
           end
 
           -- parse attitude reply message
-          if (expected_reply == REPLY_TYPE.ATTITUDE) and (parse_length >= 20) then
-            local ret_code = parse_buff[13]
+          if (expected_reply == REPLY_TYPE.ATTITUDE) and (parse_length >= ATTITUDE_PACKET_LEN.LEGACY) then
+            -- default to legacy format but also handle latest format
+            local ret_code_field = 13
+            local yaw_field = 15
+            local pitch_field = 17
+            local roll_field = 19
+            if (parse_length >= ATTITUDE_PACKET_LEN.LATEST) then
+              ret_code_field = 15
+              yaw_field = 17
+              pitch_field = 21
+              roll_field = 19
+            end
+            local ret_code = parse_buff[ret_code_field]
             if ret_code == RETURN_CODE.SUCCESS then
-              local yaw_deg = int16_value(parse_buff[16],parse_buff[15]) * 0.1
-              local roll_deg = int16_value(parse_buff[18],parse_buff[17]) * 0.1 -- reversed with pitch below?
-              local pitch_deg = int16_value(parse_buff[20],parse_buff[19]) * 0.1
+              local yaw_deg = int16_value(parse_buff[yaw_field+1],parse_buff[yaw_field]) * 0.1
+              local pitch_deg = int16_value(parse_buff[pitch_field+1],parse_buff[pitch_field]) * 0.1
+              local roll_deg = int16_value(parse_buff[roll_field+1],parse_buff[roll_field]) * 0.1
+              -- if upsidedown, subtract 180deg from yaw to undo addition of target
+              if DJIR_UPSIDEDOWN:get() > 0 then
+                yaw_deg = wrap_180(yaw_deg - 180)
+              end
               mount:set_attitude_euler(MOUNT_INSTANCE, roll_deg, pitch_deg, yaw_deg)
               if DJIR_DEBUG:get() > 1 then
                 gcs:send_text(MAV_SEVERITY.INFO, string.format("DJIR: roll:%4.1f pitch:%4.1f yaw:%4.1f", roll_deg, pitch_deg, yaw_deg))
@@ -636,16 +687,26 @@ function parse_byte(b)
           end
 
           -- parse position control reply message
-          if (expected_reply == REPLY_TYPE.POSITION_CONTROL) and (parse_length >= 13) then
-            local ret_code = parse_buff[13]
+          if (expected_reply == REPLY_TYPE.POSITION_CONTROL) and (parse_length >= POSITION_CONTROL_PACKET_LEN.LEGACY) then
+            -- default to legacy format but also handle latest format
+            local ret_code_field = 13
+            if (parse_length >= POSITION_CONTROL_PACKET_LEN.LATEST) then
+              ret_code_field = 15
+            end
+            local ret_code = parse_buff[ret_code_field]
             if ret_code ~= RETURN_CODE.SUCCESS then
               execute_fails = execute_fails + 1
             end
           end
 
           -- parse speed control reply message
-          if (expected_reply == REPLY_TYPE.SPEED_CONTROL) and (parse_length >= 13) then
-            local ret_code = parse_buff[13]
+          if (expected_reply == REPLY_TYPE.SPEED_CONTROL) and (parse_length >= SPEED_CONTROL_PACKET_LEN.LEGACY) then
+            -- default to legacy format but also handle latest format
+            local ret_code_field = 13
+            if (parse_length >= SPEED_CONTROL_PACKET_LEN.LATEST) then
+              ret_code_field = 15
+            end
+            local ret_code = parse_buff[ret_code_field]
             if ret_code ~= RETURN_CODE.SUCCESS then
               execute_fails = execute_fails + 1
             end

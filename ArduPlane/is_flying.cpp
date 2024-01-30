@@ -18,7 +18,7 @@ void Plane::update_is_flying_5Hz(void)
     bool is_flying_bool = false;
     uint32_t now_ms = AP_HAL::millis();
 
-    uint32_t ground_speed_thresh_cm = (aparm.min_gndspeed_cm > 0) ? ((uint32_t)(aparm.min_gndspeed_cm*0.9f)) : GPS_IS_FLYING_SPEED_CMS;
+    uint32_t ground_speed_thresh_cm = (aparm.min_groundspeed > 0) ? ((uint32_t)(aparm.min_groundspeed*(100*0.9))) : GPS_IS_FLYING_SPEED_CMS;
     bool gps_confirmed_movement = (gps.status() >= AP_GPS::GPS_OK_FIX_3D) &&
                                     (gps.ground_speed_cm() >= ground_speed_thresh_cm);
 
@@ -170,13 +170,15 @@ void Plane::update_is_flying_5Hz(void)
 
     crash_detection_update();
 
+#if HAL_LOGGING_ENABLED
     Log_Write_Status();
+#endif
 
     // tell AHRS flying state
     set_likely_flying(new_is_flying);
 
     // conservative ground mode value for rate D suppression
-    ground_mode = !is_flying() && !hal.util->get_soft_armed();
+    ground_mode = !is_flying() && !arming.is_armed_and_safety_off();
 }
 
 /*
@@ -186,7 +188,7 @@ void Plane::update_is_flying_5Hz(void)
  */
 bool Plane::is_flying(void)
 {
-    if (hal.util->get_soft_armed()) {
+    if (arming.is_armed_and_safety_off()) {
 #if HAL_QUADPLANE_ENABLED
         if (quadplane.is_flying_vtol()) {
             return true;
@@ -261,7 +263,7 @@ void Plane::crash_detection_update(void)
                 if (g.takeoff_throttle_min_accel > 0 &&
                         !throttle_suppressed) {
                     // if you have an acceleration holding back throttle, but you met the
-                    // accel threshold but still not fying, then you either shook/hit the
+                    // accel threshold but still not flying, then you either shook/hit the
                     // plane or it was a failed launch.
                     crashed = true;
                     crash_state.debounce_time_total_ms = CRASH_DETECTION_DELAY_MS;

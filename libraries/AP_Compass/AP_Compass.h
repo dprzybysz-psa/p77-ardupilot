@@ -35,11 +35,12 @@
 #endif
 #endif
 
-#ifndef COMPASS_CAL_ENABLED
-#define COMPASS_CAL_ENABLED !defined(HAL_BUILD_AP_PERIPH)
+#ifndef COMPASS_MOT_ENABLED
+#define COMPASS_MOT_ENABLED 1
 #endif
-#define COMPASS_MOT_ENABLED !defined(HAL_BUILD_AP_PERIPH)
-#define COMPASS_LEARN_ENABLED !defined(HAL_BUILD_AP_PERIPH)
+#ifndef COMPASS_LEARN_ENABLED
+#define COMPASS_LEARN_ENABLED 1
+#endif
 
 // define default compass calibration fitness and consistency checks
 #define AP_COMPASS_CALIBRATION_FITNESS_DEFAULT 16.0f
@@ -192,7 +193,7 @@ public:
     /*
       handle an incoming MAG_CAL command
     */
-    MAV_RESULT handle_mag_cal_command(const mavlink_command_long_t &packet);
+    MAV_RESULT handle_mag_cal_command(const mavlink_command_int_t &packet);
 
     bool send_mag_cal_progress(const class GCS_MAVLINK& link);
     bool send_mag_cal_report(const class GCS_MAVLINK& link);
@@ -201,7 +202,7 @@ public:
     bool consistent() const;
 
     /// Return the health of a compass
-    bool healthy(uint8_t i) const { return _get_state(Priority(i)).healthy; }
+    bool healthy(uint8_t i) const;
     bool healthy(void) const { return healthy(_first_usable); }
     uint8_t get_healthy_mask() const;
 
@@ -240,6 +241,11 @@ public:
     // set overall board orientation
     void set_board_orientation(enum Rotation orientation) {
         _board_orientation = orientation;
+    }
+
+    // get overall board orientation
+    enum Rotation get_board_orientation(void) const {
+        return _board_orientation;
     }
 
     /// Set the motor compensation type
@@ -378,6 +384,10 @@ private:
     bool _add_backend(AP_Compass_Backend *backend);
     void _probe_external_i2c_compasses(void);
     void _detect_backends(void);
+    void probe_i2c_spi_compasses(void);
+#if AP_COMPASS_DRONECAN_ENABLED
+    void probe_dronecan_compasses(void);
+#endif
 
     // compass cal
     void _update_calibration_trampoline();
@@ -412,7 +422,7 @@ private:
     bool _cal_requires_reboot;
     bool _cal_has_run;
 
-    // enum of drivers for COMPASS_TYPEMASK
+    // enum of drivers for COMPASS_DISBLMSK
     enum DriverType {
 #if AP_COMPASS_HMC5843_ENABLED
         DRIVER_HMC5843  =0,
@@ -420,26 +430,61 @@ private:
 #if AP_COMPASS_LSM303D_ENABLED
         DRIVER_LSM303D  =1,
 #endif
+#if AP_COMPASS_AK8963_ENABLED
         DRIVER_AK8963   =2,
+#endif
+#if AP_COMPASS_BMM150_ENABLED
         DRIVER_BMM150   =3,
+#endif
+#if AP_COMPASS_LSM9DS1_ENABLED
         DRIVER_LSM9DS1  =4,
+#endif
+#if AP_COMPASS_LIS3MDL_ENABLED
         DRIVER_LIS3MDL  =5,
+#endif
+#if AP_COMPASS_AK09916_ENABLED
         DRIVER_AK09916  =6,
+#endif
+#if AP_COMPASS_IST8310_ENABLED
         DRIVER_IST8310  =7,
+#endif
+#if AP_COMPASS_ICM20948_ENABLED
         DRIVER_ICM20948 =8,
+#endif
+#if AP_COMPASS_MMC3416_ENABLED
         DRIVER_MMC3416  =9,
+#endif
+#if AP_COMPASS_DRONECAN_ENABLED
         DRIVER_UAVCAN   =11,
+#endif
+#if AP_COMPASS_QMC5883L_ENABLED
         DRIVER_QMC5883L =12,
+#endif
+#if AP_COMPASS_SITL_ENABLED
         DRIVER_SITL     =13,
+#endif
+#if AP_COMPASS_MAG3110_ENABLED
         DRIVER_MAG3110  =14,
+#endif
 #if AP_COMPASS_IST8308_ENABLED
         DRIVER_IST8308  =15,
 #endif
+#if AP_COMPASS_RM3100_ENABLED
 		DRIVER_RM3100   =16,
+#endif
+#if AP_COMPASS_MSP_ENABLED
         DRIVER_MSP      =17,
-        DRIVER_SERIAL   =18,
+#endif
+#if AP_COMPASS_EXTERNALAHRS_ENABLED
+        DRIVER_EXTERNALAHRS   =18,
+#endif
+#if AP_COMPASS_MMC5XX3_ENABLED
         DRIVER_MMC5XX3  =19,
-    };
+#endif
+#if AP_COMPASS_QMC5883P_ENABLED
+        DRIVER_QMC5883P =20,
+#endif
+};
 
     bool _driver_enabled(enum DriverType driver_type);
     
@@ -566,7 +611,9 @@ private:
     // bitmask of options
     enum class Option : uint16_t {
         CAL_REQUIRE_GPS = (1U<<0),
+        ALLOW_DRONECAN_AUTO_REPLACEMENT = (1U<<1),
     };
+    bool option_set(Option opt) const { return (_options.get() & uint16_t(opt)) != 0; }
     AP_Int16 _options;
 
 #if COMPASS_CAL_ENABLED
@@ -608,6 +655,8 @@ private:
     uint8_t msp_instance_mask;
 #endif
     bool init_done;
+
+    bool suppress_devid_save;
 
     uint8_t _first_usable; // first compass usable based on COMPASSx_USE param
 };

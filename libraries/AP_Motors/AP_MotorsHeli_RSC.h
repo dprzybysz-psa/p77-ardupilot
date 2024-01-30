@@ -30,13 +30,6 @@
 // RSC governor defaults
 #define AP_MOTORS_HELI_RSC_GOVERNOR_RANGE_DEFAULT     100
 
-// rotor controller states
-enum RotorControlState {
-    ROTOR_CONTROL_STOP = 0,
-    ROTOR_CONTROL_IDLE,
-    ROTOR_CONTROL_ACTIVE
-};
-
 // rotor control modes
 enum RotorControlMode {
     ROTOR_CONTROL_MODE_DISABLED = 0,
@@ -58,6 +51,13 @@ public:
         _default_channel(default_channel)
     {
         AP_Param::setup_object_defaults(this, var_info);
+    };
+
+    // rotor controller states
+    enum class RotorControlState {
+        STOP = 0,
+        IDLE,
+        ACTIVE
     };
 
     // init_servo - servo initialization on start-up
@@ -110,14 +110,26 @@ public:
     // use external governor autorotation window
     void        set_autorotation_flag(bool flag) { _in_autorotation = flag; }
 
-    // set the throttle percentage to be sent to external governor to signal that autorotation bailout ramp should be used within this instance of Heli_RSC
-    void        set_ext_gov_arot_bail(int16_t pct) { _rsc_arot_bailout_pct = pct; }
-	
+    // set the throttle percentage to be used during autorotation for this instance of Heli_RSC
+    void        set_arot_idle_output(int16_t idle) { _arot_idle_output.set(idle); }
+
+    // set the manual autorotation option for this instance of Heli_RSC
+    void        set_rsc_arot_man_enable(int8_t enable) { _rsc_arot_man_enable.set(enable); }
+
+    // set the autorotation power recovery time for this instance of Heli_RSC
+    void        set_rsc_arot_engage_time(int8_t eng_time) { _rsc_arot_engage_time.set(eng_time); }
+
     // turbine start initialize sequence
     void        set_turbine_start(bool turbine_start) {_turbine_start = turbine_start; }
 
     // output - update value to send to ESC/Servo
     void        output(RotorControlState state);
+
+    // Return mask of output channels which the RSC is outputting on
+    uint32_t    get_output_mask() const;
+
+    // rotor_speed_above_critical - return true if rotor speed is above that critical for flight
+    bool        rotor_speed_above_critical(void) const { return get_rotor_speed() > get_critical_speed(); }
 
     // var_info for holding Parameter information
     static const struct AP_Param::GroupInfo var_info[];
@@ -158,7 +170,6 @@ private:
     bool            _governor_fault;              // governor fault status flag
     bool            _use_bailout_ramp;            // true if allowing RSC to quickly ramp up engine
     bool            _in_autorotation;             // true if vehicle is currently in an autorotation
-    int16_t         _rsc_arot_bailout_pct;        // the throttle percentage sent to the external governor to signal that autorotation bailout ramp should be used
     bool            _spooldown_complete;          // flag for determining if spooldown is complete
     float           _fast_idle_timer;             // cooldown timer variable
     uint8_t         _governor_fault_count;        // variable for tracking governor speed sensor faults

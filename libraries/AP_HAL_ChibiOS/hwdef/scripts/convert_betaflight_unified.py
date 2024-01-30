@@ -11,9 +11,13 @@ import sys, re
 import argparse
 
 timers = {}
+timers_by_name = {}
 resources = {}
 features = []
 chip_select = {}
+chip_select_by_type = {}
+defines = {}
+
 functions = {
     "SPI" : {},
     "MOTOR" : {},
@@ -41,6 +45,7 @@ alignment = {
     "CW90FLIP" : "ROTATION_ROLL_180",
     "CW180FLIP" : "ROTATION_ROLL_180_YAW_90",
     "CW270FLIP" : "ROTATION_PITCH_180",
+    "DEFAULT" : "ROTATION_NONE",
 }
 
 parser = argparse.ArgumentParser("convert_betaflight_unified.py")
@@ -102,8 +107,25 @@ def write_imu_config(f, n):
     f.write('''
 # IMU setup
 SPIDEV imu%s   SPI%s DEVID1 GYRO%s_CS   MODE3   1*MHZ   8*MHZ
-IMU Invensense SPI:imu%s %s
-''' % (n, bus, n, n, alignment[align]))
+''' % (n, bus, n))
+
+    c = 0
+    for define in defines:
+        for imudefine in ['USE_GYRO_SPI_', 'USE_ACCGYRO_']:
+            if define.startswith(imudefine):
+                imu = define[len(imudefine):]
+                c = c + 1
+                if c == int(n):
+                    if imu == 'ICM42688P':
+                        imudriver = 'Invensensev3'
+                    elif imu == 'BMI270':
+                        imudriver = 'BMI270'
+                    else:
+                        imudriver = 'Invensense'
+                    f.write('''
+IMU %s SPI:imu%s %s
+''' % (imudriver, n, alignment[align]))
+
     dma = "SPI" + bus + "*"
     dma_noshare[dma] = dma
 
@@ -135,6 +157,11 @@ def convert_file(fname, board_id):
         reserve_start = 96
     elif mcuclass == "H7":
         reserve_start = 384
+    else:
+        mcuclass = "F4"
+        mcu = "F405"
+        flash_size = 1024
+        reserve_start = 48
 
     # preamble
 
@@ -165,6 +192,9 @@ define STORAGE_FLASH_PAGE 1
         line = lines[i]
         if line.startswith('resource'):
             a = line.split()
+
+            if a[3] == 'NONE':
+                continue
             # function, number, pin
             pin = convert_pin(a[3])
             resource = [ a[2] , pin, a[1].split('_')[0], a[1] ]
@@ -174,6 +204,7 @@ define STORAGE_FLASH_PAGE 1
 
             if (resource[3].endswith("_CS")):
                 chip_select[resource[1]] = resource
+                chip_select_by_type[resource[3] + resource[0]] = resource[0]
 
             print("resource: %s %s %s %s" % (resource[0], resource[1], resource[2], resource[3]))
 
@@ -187,6 +218,7 @@ define STORAGE_FLASH_PAGE 1
             pin = convert_pin(a[1])
             timer = [ pin, pindef[3] , pindef[4] ]
             timers[pin] = timer
+            timers_by_name[pindef[3]] = pin
 
             print("timer: %s %s %s" % (timer[0], timer[1], timer[2]))
 
@@ -201,7 +233,20 @@ define STORAGE_FLASH_PAGE 1
             settings[a[1]] = a[3]
 
             print("settings: %s %s" % (a[1], a[3]))
+
+        elif line.startswith('#define'):
+            a = line.split()
+            defines[a[1]] = a[1]
+
+            print("define: %s" % (a[1]))
+
     #open(fname, 'w').write(''.join(lines))
+
+    # system timer
+    if 'TIM2' in timers_by_name and mcuclass != 'H7':
+        f.write("\nSTM32_ST_USE_TIMER 5\n")
+    elif 'TIM5' in timers_by_name:
+        f.write("\nSTM32_ST_USE_TIMER 2\n")
 
     f.write("\n# SPI devices\n")
     # PIN FN SPI
@@ -220,8 +265,6 @@ define STORAGE_FLASH_PAGE 1
     f.write('''\n# Beeper
 %s BUZZER OUTPUT GPIO(80) LOW
 define HAL_BUZZER_PIN 80
-define HAL_BUZZER_ON 1
-define HAL_BUZZER_OFF 0
 ''' % beeper[1])
 
     f.write("\n# SERIAL ports\n")
@@ -231,7 +274,7 @@ define HAL_BUZZER_OFF 0
         while (uartn < int(uart)):
             uartn = uartn + 1
             usarts += " EMPTY"
-        name = ("USART" if int(uartn) < 4 else "UART") + uart
+        name = ("USART" if int(uartn) < 4 or int(uartn) == 6 else "UART") + uart
         usarts += (" " + name)
         uartn = uartn + 1
     
@@ -247,7 +290,7 @@ PA12 OTG_FS_DP OTG1
     for uart in sorted(functions["SERIAL"].values()):
         if (serialn != uart[0]):
             serialn = uart[0]
-            name = "USART" if int(serialn) < 4 else "UART"
+            name = "USART" if int(serialn) < 4 or int(serialn) == 6 else "UART"
             name += serialn
             f.write("\n# %s\n" % name)
         # no need for all UARTs to have DMA. Picking the first four is better than nothing
@@ -299,7 +342,7 @@ define HAL_BATT_VOLT_SCALE 11.0
             f.write("%s BATT_CURRENT_SENS %s SCALE(1)\n" % (adc[1], name))
             f.write('''define HAL_BATT_CURR_PIN %s
 define HAL_BATT_CURR_SCALE %.1f
-''' % (get_ADC1_chan(mcu, adc[1]), int(settings['ibata_scale']) * 59.5 / 168 )) # scale taken from KakuteH7
+''' % (get_ADC1_chan(mcu, adc[1]), 10000 / int(settings['ibata_scale'])))
         elif (adc[3] == "ADC_RSSI"):
             f.write("%s RSSI_ADC %s\n" % (adc[1], name))
             f.write("define BOARD_RSSI_ANA_PIN %s\n" % (get_ADC1_chan(mcu, adc[1])))
@@ -346,10 +389,13 @@ define HAL_GPIO_%s_LED_PIN %u
         write_osd_config(f, settings['max7456_spi_bus'])
 
     if 'baro_i2c_device' in settings:
-        f.write('''
+        for define in defines:
+            if define.startswith('USE_BARO_'):
+                baro = define[len('USE_BARO_'):]
+                f.write('''
 # Barometer setup
-BARO DPS280 I2C:%s:0x76
-''' % (int(settings['baro_i2c_device']) - 1))
+BARO %s I2C:%s:0x76
+        ''' % (baro, int(settings['baro_i2c_device']) - 1))
     else:
         f.write("define HAL_BARO_ALLOW_INIT_NO_BARO 1\n")
 
@@ -357,11 +403,10 @@ BARO DPS280 I2C:%s:0x76
 # IMU setup
 ''')
 
-
-    if 'gyro_1_spibus' in settings:
+    if 'gyro_1_spibus' in settings and 'GYRO_CS1' in chip_select_by_type:
         write_imu_config(f, "1")
 
-    if 'gyro_2_spibus' in settings:
+    if 'gyro_2_spibus' in settings and 'GYRO_CS2' in chip_select_by_type:
         write_imu_config(f, "2")
 
     if len(dma_noshare) > 0:
@@ -418,6 +463,11 @@ def convert_bootloader(fname, board_id):
         reserve_start = 96
     elif mcuclass == "H7":
         reserve_start = 384
+    else:
+        mcuclass = "F4"
+        mcu = "F405"
+        flash_size = 1024
+        reserve_start = 48
 
     # preamble
 

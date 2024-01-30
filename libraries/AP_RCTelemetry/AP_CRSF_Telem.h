@@ -14,20 +14,11 @@
 */
 #pragma once
 
-#include <AP_HAL/AP_HAL_Boards.h>
-#include <AP_Frsky_Telem/AP_Frsky_config.h>
-#include <AP_OSD/AP_OSD.h>
-
-#ifndef HAL_CRSF_TELEM_ENABLED
-#define HAL_CRSF_TELEM_ENABLED AP_FRSKY_SPORT_PASSTHROUGH_ENABLED
-#endif
-
-#ifndef HAL_CRSF_TELEM_TEXT_SELECTION_ENABLED
-#define HAL_CRSF_TELEM_TEXT_SELECTION_ENABLED OSD_ENABLED && OSD_PARAM_ENABLED && HAL_CRSF_TELEM_ENABLED && BOARD_FLASH_SIZE > 1024
-#endif
+#include "AP_RCTelemetry_config.h"
 
 #if HAL_CRSF_TELEM_ENABLED
 
+#include <AP_OSD/AP_OSD.h>
 #include <AP_RCProtocol/AP_RCProtocol_CRSF.h>
 #include "AP_RCTelemetry.h"
 #include <AP_HAL/utility/sparse-endian.h>
@@ -344,6 +335,7 @@ private:
         bool use_rf_mode;
         AP_RCProtocol_CRSF::ProtocolType protocol;
         bool pending = true;
+        uint32_t last_request_info_ms;
     } _crsf_version;
 
     struct {
