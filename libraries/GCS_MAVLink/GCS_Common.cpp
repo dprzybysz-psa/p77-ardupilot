@@ -437,16 +437,17 @@ void GCS_MAVLINK::send_distance_sensor()
     bool filter_possible_proximity_sensors = false;
 
 #if HAL_PROXIMITY_ENABLED
-    AP_Proximity *proximity = AP_Proximity::get_singleton();
-    if (proximity != nullptr) {
-        for (uint8_t i = 0; i < proximity->num_sensors(); i++) {
+    // P77: we want to send distance sensor frame for each sensor for full diagnostic
+    // AP_Proximity *proximity = AP_Proximity::get_singleton();
+    // if (proximity != nullptr) {
+    //     for (uint8_t i = 0; i < proximity->num_sensors(); i++) {
 #if AP_PROXIMITY_RANGEFINDER_ENABLED
-            if (proximity->get_type(i) == AP_Proximity::Type::RangeFinder) {
-                filter_possible_proximity_sensors = true;
-            }
+    //         if (proximity->get_type(i) == AP_Proximity::Type::RangeFinder) {
+    //             filter_possible_proximity_sensors = true;
+    //         }
 #endif
-        }
-    }
+    //     }
+    // }
 #endif
 
     for (uint8_t i = 0; i < RANGEFINDER_MAX_INSTANCES; i++) {
@@ -508,24 +509,30 @@ void GCS_MAVLINK::send_proximity()
                 if (!HAVE_PAYLOAD_SPACE(chan, DISTANCE_SENSOR)) {
                     return;
                 }
-                if (dist_array.valid(i)) {
+
+                // P77: new variable
+                bool reading_valid = dist_array.valid(i);
+
+                if (reading_valid) {
                     proximity_ever_valid_bitmask |= (1U << i);
                 } else if (!(proximity_ever_valid_bitmask & (1U << i))) {
                     // we've never sent this distance out, so we don't
                     // need to send an invalid one.
                     continue;
                 }
+
                 mavlink_msg_distance_sensor_send(
                         chan,
                         AP_HAL::millis(),                               // time since system boot
                         dist_min,                                       // minimum distance the sensor can measure in centimeters
                         dist_max,                                       // maximum distance the sensor can measure in centimeters
-                        (uint16_t)(dist_array.distance[i] * 100.0f),    // current distance reading
+                        (uint16_t)(dist_array.distance[i] * 100.0f),    // last valid distance reading
                         MAV_DISTANCE_SENSOR_LASER,                      // type from MAV_DISTANCE_SENSOR enum
                         PROXIMITY_SENSOR_ID_START + i,                  // onboard ID of the sensor
                         dist_array.orientation[i],                      // direction the sensor faces from MAV_SENSOR_ORIENTATION enum
-                        0,                                              // Measurement covariance in centimeters, 0 for unknown / invalid readings
-                        0, 0, nullptr, 0);
+                        0,                                              // Measurement covariance in centimeters,
+                        0, 0, nullptr,
+                        reading_valid ? 0 : 1);                         // P77: quality: 0 for unknown / 1 for invalid readings
             }
         }
     }
