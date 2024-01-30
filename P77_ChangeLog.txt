@@ -1,0 +1,3 @@
+--- MAVLINK ROUTING --
+[2022-02-06] Do not process locally MAVLink messages to unkown component id
+-----
