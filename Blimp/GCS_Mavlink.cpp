@@ -512,13 +512,17 @@ bool GCS_MAVLINK_Blimp::mav_frame_for_command_long(MAV_FRAME &frame, MAV_CMD pac
 }
 #endif
 
-void GCS_MAVLINK_Blimp::handleMessage(const mavlink_message_t &msg)
+void GCS_MAVLINK_Blimp::handle_message(const mavlink_message_t &msg)
 {
     switch (msg.msgid) {
 
     case MAVLINK_MSG_ID_RADIO:
     case MAVLINK_MSG_ID_RADIO_STATUS: {     // MAV ID: 109
+#if HAL_LOGGING_ENABLED
         handle_radio_status(msg, blimp.should_log(MASK_LOG_PM));
+#else
+        handle_radio_status(msg, false);
+#endif
         break;
     }
 
@@ -527,7 +531,7 @@ void GCS_MAVLINK_Blimp::handleMessage(const mavlink_message_t &msg)
         break;
 
     default:
-        handle_common_message(msg);
+        GCS_MAVLINK::handle_message(msg);
         break;
     }     // end switch
 } // end handle mavlink

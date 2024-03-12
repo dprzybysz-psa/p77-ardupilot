@@ -83,6 +83,10 @@ mavproxy.py --master $DEV --baud 115200
 
 #pragma once
 
+#include "SIM_config.h"
+
+#if AP_SIM_LOWEHEISER_ENABLED
+
 #include <AP_Param/AP_Param.h>
 
 #include "SITL_Input.h"
@@ -172,3 +176,5 @@ private:
 };
 
 }
+
+#endif  // AP_SIM_LOWEHEISER_ENABLED

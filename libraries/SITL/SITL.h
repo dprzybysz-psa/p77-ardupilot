@@ -457,7 +457,9 @@ public:
     ToneAlarm tonealarm_sim;
     SIM_Precland precland_sim;
     RichenPower richenpower_sim;
+#if AP_SIM_LOWEHEISER_ENABLED
     Loweheiser loweheiser_sim;
+#endif
     IntelligentEnergy24 ie24_sim;
     FETtecOneWireESC fetteconewireesc_sim;
 #if AP_TEST_DRONECAN_DRIVERS

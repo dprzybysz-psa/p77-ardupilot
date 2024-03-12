@@ -133,8 +133,8 @@ void GCS_MAVLINK_Plane::send_attitude() const
     float p = ahrs.get_pitch();
     float y = ahrs.get_yaw();
 
-    if (!(plane.flight_option_enabled(FlightOptions::GCS_REMOVE_TRIM_PITCH_CD))) {
-        p -= radians(plane.g.pitch_trim_cd * 0.01f);
+    if (!(plane.flight_option_enabled(FlightOptions::GCS_REMOVE_TRIM_PITCH))) {
+        p -= radians(plane.g.pitch_trim);
     }
 
 #if HAL_QUADPLANE_ENABLED
@@ -1223,14 +1223,18 @@ void GCS_MAVLINK_Plane::handle_manual_control_axes(const mavlink_manual_control_
     manual_override(plane.channel_rudder, packet.r, 1000, 2000, tnow);
 }
 
-void GCS_MAVLINK_Plane::handleMessage(const mavlink_message_t &msg)
+void GCS_MAVLINK_Plane::handle_message(const mavlink_message_t &msg)
 {
     switch (msg.msgid) {
 
     case MAVLINK_MSG_ID_RADIO:
     case MAVLINK_MSG_ID_RADIO_STATUS:
     {
+#if HAL_LOGGING_ENABLED
         handle_radio_status(msg, plane.should_log(MASK_LOG_PM));
+#else
+        handle_radio_status(msg, false);
+#endif
         break;
     }
 
@@ -1390,7 +1394,7 @@ void GCS_MAVLINK_Plane::handleMessage(const mavlink_message_t &msg)
     }
 
     default:
-        handle_common_message(msg);
+        GCS_MAVLINK::handle_message(msg);
         break;
     } // end switch
 } // end handle mavlink

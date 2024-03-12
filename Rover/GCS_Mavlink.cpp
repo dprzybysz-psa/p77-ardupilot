@@ -777,7 +777,7 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_int_do_reposition(const mavlink_com
     return MAV_RESULT_ACCEPTED;
 }
 
-void GCS_MAVLINK_Rover::handleMessage(const mavlink_message_t &msg)
+void GCS_MAVLINK_Rover::handle_message(const mavlink_message_t &msg)
 {
     switch (msg.msgid) {
 
@@ -799,7 +799,7 @@ void GCS_MAVLINK_Rover::handleMessage(const mavlink_message_t &msg)
         break;
 
     default:
-        handle_common_message(msg);
+        GCS_MAVLINK::handle_message(msg);
         break;
     }
 }
@@ -1065,7 +1065,11 @@ void GCS_MAVLINK_Rover::handle_set_position_target_global_int(const mavlink_mess
 
 void GCS_MAVLINK_Rover::handle_radio(const mavlink_message_t &msg)
 {
+#if HAL_LOGGING_ENABLED
     handle_radio_status(msg, rover.should_log(MASK_LOG_PM));
+#else
+    handle_radio_status(msg, false);
+#endif
 }
 
 /*

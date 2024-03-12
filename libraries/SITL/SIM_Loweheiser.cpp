@@ -16,6 +16,10 @@
   Simulator for the Loweheiser generators
 */
 
+#include "SIM_config.h"
+
+#if AP_SIM_LOWEHEISER_ENABLED
+
 #include <AP_Math/AP_Math.h>
 
 #include "SIM_Loweheiser.h"
@@ -66,7 +70,7 @@ void Loweheiser::maybe_send_heartbeat()
     uint16_t buf_len = mavlink_msg_to_send_buffer(buf, &msg);
 
     if (write_to_autopilot((const char*)&buf, buf_len) != buf_len) {
-        ::fprintf(stderr, "write failure\n");
+        // ::fprintf(stderr, "write failure\n");
     }
 }
 
@@ -134,7 +138,7 @@ void Loweheiser::handle_message(const mavlink_message_t &msg)
             uint16_t buf_len = mavlink_msg_to_send_buffer(buf, &ack);
 
             if (write_to_autopilot((const char*)&buf, buf_len) != buf_len) {
-                ::fprintf(stderr, "write failure\n");
+                // ::fprintf(stderr, "write failure\n");
             }
             break;
         }
@@ -336,3 +340,5 @@ void Loweheiser::update_send()
         AP_HAL::panic("Failed to write to autopilot: %s", strerror(errno));
     }
 }
+
+#endif  // AP_SIM_LOWEHEISER_ENABLED

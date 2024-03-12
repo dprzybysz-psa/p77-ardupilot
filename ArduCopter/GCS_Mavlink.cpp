@@ -1167,7 +1167,7 @@ bool GCS_MAVLINK_Copter::sane_vel_or_acc_vector(const Vector3f &vec) const
     return true;
 }
 
-void GCS_MAVLINK_Copter::handleMessage(const mavlink_message_t &msg)
+void GCS_MAVLINK_Copter::handle_message(const mavlink_message_t &msg)
 {
 #if MODE_GUIDED_ENABLED == ENABLED
     // for mavlink SET_POSITION_TARGET messages
@@ -1488,7 +1488,11 @@ void GCS_MAVLINK_Copter::handleMessage(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_RADIO:
     case MAVLINK_MSG_ID_RADIO_STATUS:       // MAV ID: 109
     {
+#if HAL_LOGGING_ENABLED
         handle_radio_status(msg, copter.should_log(MASK_LOG_PM));
+#else
+        handle_radio_status(msg, false);
+#endif
         break;
     }
 
@@ -1506,7 +1510,7 @@ void GCS_MAVLINK_Copter::handleMessage(const mavlink_message_t &msg)
 #endif
         
     default:
-        handle_common_message(msg);
+        GCS_MAVLINK::handle_message(msg);
         break;
     }     // end switch
 } // end handle mavlink
