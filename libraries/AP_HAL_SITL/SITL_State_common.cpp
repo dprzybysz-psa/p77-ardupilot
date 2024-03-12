@@ -228,6 +228,9 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         return &_sitl->loweheiser_sim;
 #endif
 #if !defined(HAL_BUILD_AP_PERIPH)
+    } else if (streq(name, "loweheiser")) {
+        sitl_model->set_loweheiser(&_sitl->loweheiser_sim);
+        return &_sitl->loweheiser_sim;
     } else if (streq(name, "richenpower")) {
         sitl_model->set_richenpower(&_sitl->richenpower_sim);
         return &_sitl->richenpower_sim;
