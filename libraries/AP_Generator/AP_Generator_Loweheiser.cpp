@@ -5,6 +5,9 @@
 #include <AP_Vehicle/AP_Vehicle.h>
 #include <AP_Logger/AP_Logger.h>
 
+// P77: fix GCS include
+#include <GCS_MAVLink/GCS.h>
+
 extern const AP_HAL::HAL& hal;
 
 #define MASK_LOG_ANY                    0xFFFF
