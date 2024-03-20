@@ -1,0 +1,5 @@
+include ../CubeOrange/hwdef.dat
+
+define AP_CUSTOM_FIRMWARE_STRING "PrometheusH2"
+
+define AP_GENERATOR_LOWEHEISER_ENABLED 1
