@@ -10,4 +10,6 @@
 --- LOWEHEISER GENERATOR ---
 [2024-03-14] Include GCS_MAVLink/GCS.h into AP_Generator_Loweheiser.cpp as compilation fix.
 [2024-03-12] (postdated entry) merge Peter's Barker generator implementation of Loweheiser generator with starter support for Copter-4.5(beta2) into P77-4.5-loweheiser
+--- OEM HWDEF ---
+[2024-03-20] Add custom board OEM_H2CubeOrange.
 ------
