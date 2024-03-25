@@ -448,7 +448,8 @@ void AP_Generator_Loweheiser::command_generator()
 
     // if our desired run state is not "stop", and the RPM is zero,
     // then consider running the starter motor.  Run motor for 5s.
-    if (!user_controlled_starter && commanded_runstate != RunState::STOP) {
+    // P77: Do not enable starter if generator is in IDLE - we want to obtain full telemetry without starting engine
+    if (!user_controlled_starter && (commanded_runstate != RunState::STOP && commanded_runstate != RunState::IDLE)) {
         bool configure_for_start = false;
         if (last_start_time_ms == 0) {
             if (is_zero(packet.efi_rpm)) {
