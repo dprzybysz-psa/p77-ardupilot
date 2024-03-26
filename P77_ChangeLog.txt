@@ -1,3 +1,4 @@
 --- OEM HWDEF ---
+[2024-03-26] BugFix - enable AP_EFI_LOWEHEISER_ENABLED compilation option.
 [2024-03-20] Add custom board OEM_H2CubeOrange.
 ------
